@@ -1,9 +1,10 @@
-# 🤖 LeRobot SO-101 — Full Setup from Zero
+# 🤖 LeRobot SO-101 Robotic Arms — Full Setup from Zero
 
 Complete setup log for the Hugging Face **SO-101 robotic arm** on Windows 11 + WSL2.
 This covers everything from environment install to both arms assembled, all 12 motors flashed, and teleoperation running.
 
 A real build log — including the parts that broke.
+Caution -: Order / Keep some extra parts if possible. 3D Printed parts can break easily sometimes. It may waste your days.
 
 ---
 
