@@ -3,7 +3,7 @@
 Complete setup log for the Hugging Face **SO-101 robotic arm** on Windows 11 + WSL2.
 This covers everything from environment install to both arms assembled, all 12 motors flashed, and teleoperation running.
 
-Not a clean tutorial. A real build log — including the parts that broke.
+A real build log — including the parts that broke.
 
 ---
 
