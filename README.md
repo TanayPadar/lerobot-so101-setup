@@ -4,7 +4,8 @@ Complete setup log for the Hugging Face **SO-101 robotic arm** on Windows 11 + W
 This covers everything from environment install to both arms assembled, all 12 motors flashed, and teleoperation running.
 
 A real build log — including the parts that broke.
-Caution -: Order / Keep some extra parts if possible. 3D Printed parts can break easily sometimes. It may waste your days.
+
+> ⚠️ Caution: Order some extra parts if possible. 3D printed parts can break easily. It may waste your days.
 
 ---
 
@@ -14,7 +15,6 @@ Caution -: Order / Keep some extra parts if possible. 3D Printed parts can break
 |---|---|
 | WSL2 + Ubuntu 24.04 environment | ✅ done |
 | Python 3.12 + LeRobot 0.5.1 install | ✅ done |
-| ROS2 Jazzy install | ✅ done |
 | USB passthrough (usbipd-win) | ✅ done |
 | Motor flashing — all 12 servos | ✅ done |
 | Both arms assembled | ✅ done |
@@ -28,7 +28,6 @@ Caution -: Order / Keep some extra parts if possible. 3D Printed parts can break
 - **OS:** Windows 11 + WSL2 (Ubuntu 24.04)
 - **LeRobot version:** 0.5.1
 - **Python:** 3.12 (not 3.10 — see gotchas)
-- **ROS2:** Jazzy
 - **Hardware:** SO-101 follower + leader arms, STS3215 motors (C044 and C046 variants — both compatible)
 - **USB adapter:** Waveshare Bus Servo Adapter board
 - **Ports:** follower = `/dev/ttyACM0`, leader = `/dev/ttyACM1`
@@ -91,37 +90,6 @@ Verify:
 python -c "import lerobot; print(lerobot.__version__)"
 ```
 
-### 4. ROS2 Jazzy
-
-```bash
-sudo apt install software-properties-common
-sudo add-apt-repository universe
-sudo apt update && sudo apt install curl -y
-sudo curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key \
-  -o /usr/share/keyrings/ros-archive-keyring.gpg
-echo "deb [arch=$(dpkg --print-architecture) \
-  signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] \
-  http://packages.ros.org/ros2/ubuntu \
-  $(. /etc/os-release && echo $UBUNTU_CODENAME) main" \
-  | sudo tee /etc/apt/sources.list.d/ros2.list > /dev/null
-sudo apt update
-sudo apt install ros-jazzy-desktop -y
-```
-
-Source it permanently:
-
-```bash
-echo "source /opt/ros/jazzy/setup.bash" >> ~/.bashrc
-source ~/.bashrc
-```
-
-Verify (ROS2 doesn't have `--version`, do this instead):
-
-```bash
-ros2 doctor
-# should show: All 5 checks passed
-```
-
 ---
 
 ## 🔌 USB Passthrough (Windows → WSL2)
@@ -181,7 +149,6 @@ The LeRobot terminal script for motor flashing can be unreliable on Windows. Use
 Verify all motors detected after flashing:
 
 ```bash
-# In WSL with venv active:
 python -c "
 from scservo_sdk import PortHandler, PacketHandler
 port = PortHandler('/dev/ttyACM0')
@@ -223,15 +190,24 @@ Calibration files saved to:
 ~/.cache/huggingface/lerobot/calibration/
 ```
 
-### Fixing bad calibration manually
+### ⚠️ Critical calibration rules
 
-If the arm jumps to a wrong position on startup (e.g. elbow fully extended), the `homing_offset` in the calibration JSON is wrong. Edit it directly:
+**1. Never edit the calibration file manually.**
+Especially the offsets. One wrong value and the motor doesn't know where neutral is — it fights the position physically. If calibration is wrong, redo it from scratch. Don't patch it.
+
+**2. Neutral position must carry the weight.**
+Arms should be seated but slightly extended during calibration — not fully straight, not fully folded. The shoulder joint must be able to hold the upper arm's weight in that position without fighting. Wrong neutral = wrong offsets = overload every session.
+
+**3. Check your screws before calibrating.**
+If a motor horn is loose, the horn slips during calibration movement. The offsets recorded are wrong because the physical movement wasn't tracking correctly. Tighten every horn screw before you run calibration.
+
+### If calibration goes wrong
+
+If the arm jumps to a wrong position on startup, redo calibration fully. If you must inspect the file:
 
 ```bash
 nano ~/.cache/huggingface/lerobot/calibration/robots/so_follower/None.json
 ```
-
-Find the joint with the wrong offset and set it to `0`, then fine-tune with small increments until the neutral position looks correct.
 
 ---
 
@@ -252,6 +228,12 @@ Move the leader arm. The follower mirrors it in real time.
 The shoulder motor (ID 2) throws an overload error when the arm is in a fully extended position. This is a physical load issue — the motor struggles against the arm's weight when fully outstretched.
 
 Fix: keep the arm in a compact position during teleoperation. If the error fires mid-session, clear it with:
+
+```bash
+python scripts/clear_overload.py
+```
+
+Or inline:
 
 ```bash
 python -c "
@@ -279,8 +261,9 @@ port.closePort()
 | Motors not responding | External DC power required, USB-C power alone is insufficient |
 | Device not found in WSL | Re-run `usbipd attach` every session, busid may change |
 | Scripts not found at `lerobot/scripts/` | In v0.5.1 scripts moved to `src/lerobot/scripts/` |
-| Arm jumps to wrong position on startup | Edit homing_offset in calibration JSON directly |
-| `ros2 --version` errors | Normal — ROS2 doesn't support that flag. Use `ros2 doctor` |
+| Arm jumps to wrong position on startup | Redo calibration — don't manually patch the file |
+| Calibration offsets always wrong | Check horn screws — loose screws = slipping horn = bad offsets |
+| Motor 2 overloads every session | Neutral pose is wrong — arm is too extended, redo calibration |
 | Calibration magnitude error | Arm was at an extreme when you pressed Enter — reclamp and retry from neutral |
 
 ---
@@ -290,7 +273,7 @@ port.closePort()
 This repo ends here — hardware ready, teleoperation confirmed.
 
 Next repos:
-- [`lerobot-so101-teleoperation`](https://github.com/TanayPadar) — dataset recording with OV9281 camera
+- [`lerobot-so101-teleoperation`](https://github.com/TanayPadar) — dataset recording with camera
 - [`lerobot-act-policy`](https://github.com/TanayPadar) — training runs and results
 
 ---
@@ -298,5 +281,6 @@ Next repos:
 ## 👤 About
 
 Built by [Tanay Padar](https://github.com/TanayPadar) — 21, Pune, India.
+My father runs a CNC/VMC manufacturing facility. This arm is step one toward deploying real automation on that floor.
 
 Follow the build on X: [@TanayPadar](https://twitter.com/TanayPadar)
